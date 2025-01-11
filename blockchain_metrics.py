@@ -15,7 +15,7 @@ def read_yaml(filename):
     return settings
 
 def print_error(error):
-    print('\nERROR!!')
+    print('ERROR!!')
     print(error)
     print("\n")
 
@@ -244,6 +244,10 @@ class NFT:
     GOV_NFT = 'NftGovernance'
     GOV_CONTRACT = '0x88e0f9b16f5c3ff1f48576bf2dc785070c6a86a5'
     NFT_CREATION_ADR = '0x0000000000000000000000000000000000000000'
+    CREATED = 'created'
+    SOLD = 'sold'
+    BOUGHT = 'bought'
+    GOV = 'governance'
 
     def __init__(self, nft_tokenID):
         self.id = nft_tokenID
@@ -253,84 +257,101 @@ class NFT:
         self.nft_contractAddresses = []
         self.nft_tokenValues = []
         self.nft_tokenNames = []
-        self.sold = [False]
-        self.created = [False]
-        self.bought = [False]
-        self.governance = [False]
-        self.nr_trans = -1
+        self.nft_values = []
+        self.statuses = []
+        self.idx_trans = -1
         
-    def update_nft(self, user_addr, nft_date, nft_from, nft_to, nft_contractAddress, nft_tokenValue, nft_tokenName):
-        self.nr_trans = self.nr_trans + 1
+    def update_nft(self, user_addr, nft_date, nft_from, nft_to, nft_contractAddress, nft_tokenValue, nft_tokenName, nft_value):
+        self.idx_trans = self.idx_trans + 1
         self.nft_dates.append(nft_date)
         self.nft_froms.append(nft_from)
         self.nft_tos.append(nft_to)
         self.nft_contractAddresses.append(nft_contractAddress)
         self.nft_tokenValues.append(nft_tokenValue)
         self.nft_tokenNames.append(nft_tokenName)
+        self.nft_values.append(nft_value)
 
-        if user_addr == self.nft_froms[self.nr_trans]:
-            # This NFT was sold
-            self.set_sold()
+        try:
+            if user_addr.lower() == self.nft_froms[self.idx_trans].lower():
+                # This NFT was sold
+                # breakpoint()
+                self.set_sold()
 
-        elif user_addr == self.nft_tos[self.nr_trans]:
-            if self.nft_froms[self.nr_trans] == NFT.NFT_CREATION_ADR:
-                # This NFT was created
-                self.set_created()
-                if self.nft_tokenNames[self.nr_trans] == NFT.GOV_NFT:
-                    self.set_gov()
+            elif user_addr.lower() == self.nft_tos[self.idx_trans].lower():
+                if self.nft_froms[self.idx_trans].lower() == NFT.NFT_CREATION_ADR.lower():
+                    # This NFT was created
+                    # breakpoint()
+                    self.set_created()
+                    if self.nft_tokenNames[self.idx_trans] == NFT.GOV_NFT:
+                        # breakpoint()
+                        self.set_gov()
+                else:
+                    # This NFT was bought
+                    # breakpoint()
+                    self.set_bought()
             else:
-                # This NFT was bought
-                self.set_bought()
-        else:
-            raise Exception(f'Address {user_addr} is not in to or from for nft {self.id}')
+                raise Exception(f'Address {user_addr} is not in to or from for nft {self.id}')
+        except Exception as e:
+            print_error(e)
+            # breakpoint()
 
     def set_created(self):
-        if self.nr_trans != 0:
+        if self.idx_trans != 0:
             raise Exception(f'NFT {self.id} cannot be created when a transaction already exists')
         
-        if self.sold[self.nr_trans] or self.bought[self.nr_trans] or self.governance[self.nr_trans]:
+        if self.statuses != []:
             raise Exception(f'NFT {self.id} has incompatible status to be created')
-        self.created.append(True)
+
+        if self.nft_values[self.idx_trans] != '0':
+            raise Exception(f'NFT {self.id} is created but there is money involved')
+
+        self.statuses.append(NFT.CREATED)
 
     def set_sold(self):
-        if (self.nr_trans == 0) or self.is_gov():
+        if (self.idx_trans == 0) or self.is_gov():
             raise Exception(f'NFT {self.id} has incompatible status to be sold')
-        self.sold.append(True)
+        if self.nft_values[self.idx_trans] == '0':
+            raise Exception(f'NFT {self.id} is sold but for no money')
+        self.statuses.append(NFT.SOLD)
 
     def set_bought(self):
         if self.is_gov():
             raise Exception(f'NFT {self.id} has incompatible status to be bought')
-        self.bought = True
+        if self.nft_values[self.idx_trans] == '0':
+            raise Exception(f'NFT {self.id} is bought but for no money')
+        self.statuses.append(NFT.BOUGHT)
 
     def set_gov(self):
         if self.was_ever_sold() or self.was_ever_bought():
             raise Exception(f'NFT {self.id} has incompatible status to be a governance NFT')
-        self.governance = True
+        self.statuses.append(NFT.GOV)
 
     def was_ever_sold(self):
-        for i in range(self.nr_trans):
-            if self.sold[i] == True:
+        for i in range(self.idx_trans-1):
+            if self.statuses[i] == NFT.SOLD:
                 return True
         return False
 
     def was_ever_bought(self):
-        for i in range(self.nr_trans):
-            if self.bought[i] == True:
+        for i in range(self.idx_trans-1):
+            if self.statuses[i] == NFT.BOUGHT:
                 return True
         return False
     
     def was_ever_created(self):
-        for i in range(1,self.nr_trans):
-            if self.created[i] == True:
+        if len(self.statuses) == 0:
+            return False
+        # Creation can only be the first transaction
+        for i in range(1,len(self.statuses)):
+            if self.statuses[i] == NFT.CREATED:
                 raise Exception(f'NFT {self.id} has creation at trans {i} > 0')
-        if not self.created[0] == True:
+        if not self.statuses[0] == NFT.CREATED:
             return False
         return True
-        
     
     def is_gov(self):
-        for i in range(self.nr_trans):
-            if self.governance[i] == True:
+        for i in range(len(self.statuses)):
+            if self.statuses[i] == NFT.GOV:
                 return True
         return False
 
@@ -342,25 +363,44 @@ class AddressMetrics:
     BOUGHT_IDX = 2
 
 
-    def __init__(self, address):
+    def __init__(self, address:str, ps:PolygonScan):
         self.address = address
+        self.ps = ps
+        self.transactions = {}
         self.NFTs = []
+
+    def get_transactions(self, address:str=None):
+        if address == None:
+            target_addr = self.address
+        else:
+            target_addr = address
+        transactions = self.ps.get_normal_transactions(address=target_addr)
+        if transactions == None:
+            print(f'No  transactions for {target_addr}')
+            return False
+        print(f'{len(transactions)} Normal transactions for {target_addr}')
+        for tr in transactions:
+            # print(tr)
+            self.transactions[tr['hash'].lower()] = {}
+            obj = self.transactions[tr['hash']]
+            obj['date'] = datetime.fromtimestamp(int(tr['timeStamp']))
+            obj['from'] = tr['from']
+            obj['to'] = tr['to']
+            obj['value'] = tr['value']
+            obj['methodId'] = tr['methodId']
+        return True
         
-        self.NFT_made = 0
-        self.NFT_sold = 0
-        self.NFT_bought = 0
-
-
-    def ERC1155_metrics(self, transfers:list):
+    def set_ERC1155_transfers(self):
+        transfers = self.ps.get_ERC1155_token_transfers(address=self.address, contract_address=None)
         if transfers == None:
             print(f'No ERC1155 token transfers for {self.address}')
-            return
+            return False
         print(f'{len(transfers)} ERC1155 token transfers for {self.address}')
         for tr in transfers:
-            print(tr)
+            # print(tr)
             tokenID = int(tr['tokenID'])
-            if tokenID == 127 or tokenID == 16 or tokenID == 20:
-                continue
+            # if tokenID == 127 or tokenID == 16 or tokenID == 20:
+            #     continue
             nft = self.retrieve_nft(tokenID)
             tr_date = datetime.fromtimestamp(int(tr['timeStamp']))
             tr_from = tr['from']
@@ -368,9 +408,22 @@ class AddressMetrics:
             contractAddress = tr['contractAddress']
             tokenValue = tr['tokenValue']
             tokenName = tr['tokenName']
-
-            nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName)
-
+            hash = tr['hash']
+            transaction = self.retrieve_transaction(hash)
+            if transaction == None:
+                print(f'Transaction hash {hash} not found, retrieving more transactions')
+                if self.address.lower() == tr_from.lower():
+                    self.get_transactions(address=tr_to)
+                else:
+                    self.get_transactions(address=tr_from)
+                transaction = self.retrieve_transaction(hash)
+                if transaction == None:
+                    raise Exception(f'Transaction hash {hash} not found')
+            # breakpoint()
+            nft_value = transaction['value'] if transaction is not None else '0'
+            nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName, nft_value)
+        return True
+    
     def retrieve_nft(self, id):
         for nft in self.NFTs:
             if nft.id == id:
@@ -378,6 +431,13 @@ class AddressMetrics:
         nft = NFT(id)
         self.NFTs.append(nft)
         return nft
+
+    def retrieve_transaction(self, hash):
+        if hash.lower() in self.transactions:
+            return self.transactions[hash.lower()]
+        return None
+        # print(f'Transaction hash {hash} not found')
+        # return None
 
 
 def main(filename):
@@ -398,12 +458,15 @@ def main(filename):
         
     for wallet in wallets:
         print(f'######## Address {wallet} ########')
+
+        metrics = AddressMetrics(wallet, ps)
         
-        transfers = ps.get_ERC1155_token_transfers(address=wallet, contract_address=None)
-        metrics = AddressMetrics(wallet)
-        metrics.ERC1155_metrics(transfers)
+        if not metrics.get_transactions():
+            continue
         
-        breakpoint()
+        metrics.set_ERC1155_transfers()
+        
+        # breakpoint()
         
 
         transfers = ps.get_ERC20_token_transfers(address=wallet,contract_address=None)
