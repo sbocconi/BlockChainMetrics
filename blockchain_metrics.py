@@ -8,6 +8,8 @@ from datetime import datetime
 SETTINGS_FILE = '.settings.yaml'
 WEI_TO_POL = 10**18
 
+TRANS_CACHE = {}
+
 def read_yaml(filename):
     full_file_path = Path(__file__).parent.joinpath(filename)
     with open(full_file_path) as settings:
@@ -19,6 +21,21 @@ def print_error(error):
     print(error)
     print("\n")
 
+def HexStr2Int(hexstring:str) -> int:
+    if hexstring.lower() == '0x':
+        return 0
+    if hexstring == '':
+        return None
+    return int(hexstring,16)
+
+def Int2HexStr(numint:int) -> str:
+    """
+        Convert to hex with padding to get even length
+    """
+    enc_ln = len(hex(numint)) - len('0x')
+    padd = enc_ln + enc_ln % 2
+    # breakpoint()
+    return f'0x{numint:0{padd}x}'
 
 class PolygonScan:
     
@@ -90,11 +107,14 @@ class PolygonScan:
                 response = requests.get(api_url_page)
                 if response.status_code == 200:
                     payload = response.json()
-                    if payload['message'] != 'OK' and payload['message'] != 'No transactions found':
+                    if 'message' in payload and payload['message'] != 'OK' and payload['message'] != 'No transactions found':
                         print_error(f'Url {api_url_page} gave response {payload}')
                         # breakpoint()
                         return None
-                    result = payload['result']
+                    if 'result' in payload:
+                        result = payload['result']
+                    else:
+                        breakpoint()
                 else:
                     print_error(f'Url {api_url_page} gave response {response.status_code}, {response}')
                     return None
@@ -111,8 +131,8 @@ class PolygonScan:
                 return results
             else:
                 if result == None:
-                    # Should not happen, see why
-                    breakpoint()
+                    # Should not happen
+                    raise(f'Result is None while calling {api_url_page}')
                 results.extend(result)
                 if len(result) < offset:
                     return results
@@ -124,7 +144,7 @@ class PolygonScan:
 
         
 
-    def get_POL_balance(self, addresses):
+    def get_POL_balance(self, addresses:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-pol-balance-for-a-single-address
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-pol-balance-for-multiple-addresses-in-a-single-call
@@ -135,11 +155,11 @@ class PolygonScan:
         
         if type(addresses) == list:
             action = 'balancemulti'
-            addr_list = ','.join(addresses)
+            addr_list = ','.join([Int2HexStr(address) for address in addresses])
             api_url = f'{self.endpoint}?module={module}&action={action}&address={addr_list}&tag={tag}&apikey={self.token}'
         else:
             action = 'balance'
-            api_url = f'{self.endpoint}?module={module}&action={action}&address={addresses}&tag={tag}&apikey={self.token}'
+            api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(addresses)}&tag={tag}&apikey={self.token}'
 
         result = self.make_call(api_url)
 
@@ -151,8 +171,32 @@ class PolygonScan:
             # breakpoint()
         return balances
 
+    def get_transaction_count(self, address:int):
+        """
+           https://docs.polygonscan.com/api-endpoints/geth-parity-proxy#eth_gettransactioncount
+        """
+        module = 'proxy'
+        action = 'eth_getTransactionCount'
+        tag = 'latest'
+    
+        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&tag={tag}&apikey={self.token}'
+        result = self.make_call(api_url=api_url, paginated=False)
 
-    def get_normal_transactions(self, address):
+        return result
+
+    def get_transaction(self, txhash):
+        """
+           https://docs.polygonscan.com/api-endpoints/geth-parity-proxy#eth_gettransactionbyhash 
+        """
+        module = 'proxy'
+        action = 'eth_getTransactionByHash'
+    
+        api_url = f'{self.endpoint}?module={module}&action={action}&txhash={Int2HexStr(txhash)}&apikey={self.token}'
+        result = self.make_call(api_url=api_url, paginated=False)
+
+        return result
+
+    def get_normal_transactions(self, address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-a-list-of-normal-transactions-by-address
         """
@@ -161,13 +205,13 @@ class PolygonScan:
         sort = 'asc'
         startblock = 0
         endblock = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={address}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
+        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
 
         results = self.make_call(api_url=api_url, paginated=True)
 
         return results
 
-    def get_internal_transactions(self, address):
+    def get_internal_transactions(self, address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-a-list-of-internal-transactions-by-address
         """
@@ -176,74 +220,73 @@ class PolygonScan:
         sort = 'asc'
         startblock = 0
         endblock = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={address}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
+        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
 
         results = self.make_call(api_url=api_url, paginated=True)
 
         return results
 
-    def get_ERC_token_transfers(self, action, address, contract_address):
+    def get_ERC_token_transfers(self, action:str, address:int, contract_address:int):
         module = 'account'
         action = action
         sort = 'asc'
         api_url = f'{self.endpoint}?module={module}&action={action}&sort={sort}&apikey={self.token}'
-        if address is not None and contract_address is None:
-            api_url = f'{api_url}&address={address}'
-        elif address is None and contract_address is not None:
-            api_url = f'{api_url}&contractaddress={contract_address}'
-        elif address is not None and contract_address is not None:
-            api_url = f'{api_url}&address={address}&contractaddress={contract_address}'
-        else:
-            raise Exception(f'Address and contract address cannot be both null')
         
+        if address is None and contract_address is None:
+            raise Exception(f'Address and contract address cannot be both null')
 
+        if address is not None:
+            api_url = f'{api_url}&address={Int2HexStr(address)}'
+        if contract_address is not None:
+            api_url = f'{api_url}&contractaddress={Int2HexStr(contract_address)}'
+        
         results = self.make_call(api_url=api_url,  paginated=True)
 
         return results
     
-    def get_ERC20_token_transfers(self, address, contract_address):
+    def get_ERC20_token_transfers(self, address:int, contract_address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-a-list-of-erc-20-token-transfer-events-by-address
         """
         return self.get_ERC_token_transfers(action = 'tokentx', address=address, contract_address=contract_address)
 
-    def get_ERC721_token_transfers(self, address, contract_address):
+    def get_ERC721_token_transfers(self, address:int, contract_address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-a-list-of-erc-721-token-transfer-events-by-address
         """
         return self.get_ERC_token_transfers(action = 'tokennfttx', address=address, contract_address=contract_address)
 
-    def get_ERC1155_token_transfers(self, address, contract_address):
+    def get_ERC1155_token_transfers(self, address:int, contract_address:int):
         """
             https://docs.polygonscan.com/api-endpoints/accounts#get-a-list-of-erc1155-token-transfer-events-by-address
         """
         return self.get_ERC_token_transfers(action = 'token1155tx', address=address, contract_address=contract_address)
 
-    def get_ERC20_token_supply(self, contract_address):
+    def get_ERC20_token_supply(self, contract_address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/tokens#get-erc-20-token-totalsupply-by-contractaddress
         """
         module = 'stats'
         action = 'tokensupply'
-        api_url = f'{self.endpoint}?module={module}&action={action}&contractaddress={contract_address}&apikey={self.token}'
+        api_url = f'{self.endpoint}?module={module}&action={action}&contractaddress={Int2HexStr(contract_address)}&apikey={self.token}'
         result = self.make_call(api_url)
         return result
 
-    def get_ERC20_token_balance(self, address, contract_address):
+    def get_ERC20_token_balance(self, address:int, contract_address:int):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/tokens#get-erc-20-token-account-balance-by-contractaddress
         """
         module = 'account'
         action = 'tokenbalance'
         tag = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={address}&contractaddress={contract_address}&tag={tag}&apikey={self.token}'
+        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&contractaddress={Int2HexStr(contract_address)}&tag={tag}&apikey={self.token}'
         result = self.make_call(api_url)
         return result
 
 class NFT:
     GOV_NFT = 'NftGovernance'
     GOV_CONTRACT = '0x88e0f9b16f5c3ff1f48576bf2dc785070c6a86a5'
-    NFT_CREATION_ADR = '0x0000000000000000000000000000000000000000'
+    NFT_CREATION_ADR = HexStr2Int('0x0000000000000000000000000000000000000000')
     CREATED = 'created'
     SOLD = 'sold'
     BOUGHT = 'bought'
@@ -251,38 +294,46 @@ class NFT:
 
     def __init__(self, nft_tokenID):
         self.id = nft_tokenID
-        self.nft_dates = []
-        self.nft_froms = []
-        self.nft_tos = []
-        self.nft_contractAddresses = []
-        self.nft_tokenValues = []
-        self.nft_tokenNames = []
-        self.nft_values = []
+        self.dates = []
+        self.froms = []
+        self.tos = []
+        self.contractAddresses = []
+        self.tokenValues = []
+        self.tokenNames = []
+        self.values = []
         self.statuses = []
-        self.idx_trans = -1
+        self.txhashes = []
         
-    def update_nft(self, user_addr, nft_date, nft_from, nft_to, nft_contractAddress, nft_tokenValue, nft_tokenName, nft_value):
-        self.idx_trans = self.idx_trans + 1
-        self.nft_dates.append(nft_date)
-        self.nft_froms.append(nft_from)
-        self.nft_tos.append(nft_to)
-        self.nft_contractAddresses.append(nft_contractAddress)
-        self.nft_tokenValues.append(nft_tokenValue)
-        self.nft_tokenNames.append(nft_tokenName)
-        self.nft_values.append(nft_value)
+    def update_nft(self, user_addr:int, nft_date:datetime, nft_from:int, nft_to:int, nft_contractAddress:int, nft_tokenValue:int, nft_tokenName:str, transaction:dict):
+        self.dates.append(nft_date)
+        self.froms.append(nft_from)
+        self.tos.append(nft_to)
+        self.contractAddresses.append(nft_contractAddress)
+        self.tokenValues.append(nft_tokenValue)
+        self.tokenNames.append(nft_tokenName)
+        self.txhashes.append(transaction['hash'])
+
+        if type(transaction['value']) == int:
+            nft_value = transaction['value']
+        elif transaction['value'].lower().startswith('0x'):
+            nft_value = HexStr2Int(transaction['value'])
+        else:
+            raise Exception(f"Unknown format for value: {transaction['value']}")
+        self.values.append(nft_value)
+        # breakpoint()
 
         try:
-            if user_addr.lower() == self.nft_froms[self.idx_trans].lower():
+            if user_addr == self.froms[-1]:
                 # This NFT was sold
                 # breakpoint()
                 self.set_sold()
 
-            elif user_addr.lower() == self.nft_tos[self.idx_trans].lower():
-                if self.nft_froms[self.idx_trans].lower() == NFT.NFT_CREATION_ADR.lower():
+            elif user_addr == self.tos[-1]:
+                if self.froms[-1] == NFT.NFT_CREATION_ADR:
                     # This NFT was created
                     # breakpoint()
                     self.set_created()
-                    if self.nft_tokenNames[self.idx_trans] == NFT.GOV_NFT:
+                    if self.tokenNames[-1] == NFT.GOV_NFT:
                         # breakpoint()
                         self.set_gov()
                 else:
@@ -293,31 +344,29 @@ class NFT:
                 raise Exception(f'Address {user_addr} is not in to or from for nft {self.id}')
         except Exception as e:
             print_error(e)
-            # breakpoint()
+            print(f'List of transactions: {[Int2HexStr(i) for i in self.txhashes]}')
+            breakpoint()
 
     def set_created(self):
-        if self.idx_trans != 0:
-            raise Exception(f'NFT {self.id} cannot be created when a transaction already exists')
-        
-        if self.statuses != []:
+        if len(self.statuses) != 0:
             raise Exception(f'NFT {self.id} has incompatible status to be created')
 
-        if self.nft_values[self.idx_trans] != '0':
+        if self.values[-1] != 0:
             raise Exception(f'NFT {self.id} is created but there is money involved')
 
         self.statuses.append(NFT.CREATED)
 
     def set_sold(self):
-        if (self.idx_trans == 0) or self.is_gov():
+        if (len(self.statuses) == 0) or self.is_gov():
             raise Exception(f'NFT {self.id} has incompatible status to be sold')
-        if self.nft_values[self.idx_trans] == '0':
+        if self.values[-1] == 0:
             raise Exception(f'NFT {self.id} is sold but for no money')
         self.statuses.append(NFT.SOLD)
 
     def set_bought(self):
         if self.is_gov():
             raise Exception(f'NFT {self.id} has incompatible status to be bought')
-        if self.nft_values[self.idx_trans] == '0':
+        if self.values[-1] == 0:
             raise Exception(f'NFT {self.id} is bought but for no money')
         self.statuses.append(NFT.BOUGHT)
 
@@ -326,19 +375,19 @@ class NFT:
             raise Exception(f'NFT {self.id} has incompatible status to be a governance NFT')
         self.statuses.append(NFT.GOV)
 
-    def was_ever_sold(self):
-        for i in range(self.idx_trans-1):
+    def was_ever_sold(self) -> bool:
+        for i in range(len(self.statuses)):
             if self.statuses[i] == NFT.SOLD:
                 return True
         return False
 
-    def was_ever_bought(self):
-        for i in range(self.idx_trans-1):
+    def was_ever_bought(self) -> bool:
+        for i in range(len(self.statuses)):
             if self.statuses[i] == NFT.BOUGHT:
                 return True
         return False
     
-    def was_ever_created(self):
+    def was_ever_created(self) -> bool:
         if len(self.statuses) == 0:
             return False
         # Creation can only be the first transaction
@@ -349,24 +398,34 @@ class NFT:
             return False
         return True
     
-    def is_gov(self):
+    def is_gov(self) -> bool:
         for i in range(len(self.statuses)):
             if self.statuses[i] == NFT.GOV:
                 return True
         return False
 
+    def get_revenue(self) -> int:
+        rev = 0
+        for i in range(len(self.statuses)):
+            if self.statuses[i] == NFT.SOLD:
+                rev = rev + self.values[i]
+        return rev
+    
+    def get_costs(self) -> int:
+        cst = 0
+        for i in range(len(self.statuses)):
+            if self.statuses[i] == NFT.BOUGHT:
+                cst = cst + self.values[i]
+        return cst
+
 
 
 class AddressMetrics:
-    MADE_IDX = 0
-    SOLD_IDX = 1
-    BOUGHT_IDX = 2
-
 
     def __init__(self, address:str, ps:PolygonScan):
         self.address = address
         self.ps = ps
-        self.transactions = {}
+        
         self.NFTs = []
 
     def get_transactions(self, address:str=None):
@@ -376,54 +435,78 @@ class AddressMetrics:
             target_addr = address
         transactions = self.ps.get_normal_transactions(address=target_addr)
         if transactions == None:
-            print(f'No  transactions for {target_addr}')
+            print(f'No  transactions for {Int2HexStr(target_addr)}')
             return False
-        print(f'{len(transactions)} Normal transactions for {target_addr}')
+        print(f'{len(transactions)} Normal transactions for {Int2HexStr(target_addr)}')
         for tr in transactions:
             # print(tr)
-            self.transactions[tr['hash'].lower()] = {}
-            obj = self.transactions[tr['hash']]
-            obj['date'] = datetime.fromtimestamp(int(tr['timeStamp']))
-            obj['from'] = tr['from']
-            obj['to'] = tr['to']
-            obj['value'] = tr['value']
-            obj['methodId'] = tr['methodId']
+            txhash = HexStr2Int(tr['hash'])
+            if Int2HexStr(txhash) not in TRANS_CACHE:
+                TRANS_CACHE[Int2HexStr(txhash)] = {}
+                TRANS_CACHE[Int2HexStr(txhash)]['date'] = datetime.fromtimestamp(int(tr['timeStamp']))
+                TRANS_CACHE[Int2HexStr(txhash)]['hash'] = txhash
+                TRANS_CACHE[Int2HexStr(txhash)]['from'] = HexStr2Int(tr['from'])
+                TRANS_CACHE[Int2HexStr(txhash)]['to'] = HexStr2Int(tr['to'])
+                TRANS_CACHE[Int2HexStr(txhash)]['value'] = int(tr['value'])
+                TRANS_CACHE[Int2HexStr(txhash)]['methodId'] = HexStr2Int(tr['methodId'])
         return True
-        
-    def set_ERC1155_transfers(self):
-        transfers = self.ps.get_ERC1155_token_transfers(address=self.address, contract_address=None)
-        if transfers == None:
-            print(f'No ERC1155 token transfers for {self.address}')
-            return False
-        print(f'{len(transfers)} ERC1155 token transfers for {self.address}')
+    
+    def parse_token_transfers(self, transfers, tokentype):
         for tr in transfers:
             # print(tr)
             tokenID = int(tr['tokenID'])
-            # if tokenID == 127 or tokenID == 16 or tokenID == 20:
-            #     continue
-            nft = self.retrieve_nft(tokenID)
             tr_date = datetime.fromtimestamp(int(tr['timeStamp']))
-            tr_from = tr['from']
-            tr_to = tr['to']
-            contractAddress = tr['contractAddress']
-            tokenValue = tr['tokenValue']
+            tr_from = HexStr2Int(tr['from'])
+            tr_to = HexStr2Int(tr['to'])
+            contractAddress = HexStr2Int(tr['contractAddress'])
+            if tokentype == 'ERC1155':
+                tokenValue = int(tr['tokenValue'])
+            elif tokentype == 'ERC721':
+                tokenValue = 1
+            else:
+                raise Exception(f'Token type {tokentype} not supported!')
+            
             tokenName = tr['tokenName']
-            hash = tr['hash']
-            transaction = self.retrieve_transaction(hash)
+            txhash = HexStr2Int(tr['hash'])
+            transaction = self.retrieve_transaction(txhash)
             if transaction == None:
-                print(f'Transaction hash {hash} not found, retrieving more transactions')
-                if self.address.lower() == tr_from.lower():
-                    self.get_transactions(address=tr_to)
+                print(f'Transaction hash {Int2HexStr(txhash)} not found, retrieving more transactions')
+                if tr_from == NFT.NFT_CREATION_ADR or tr_to == NFT.NFT_CREATION_ADR:
+                    # Too many transactions and they should be all of type mint with no costs
+                    transaction = self.ps.get_transaction(txhash)
                 else:
-                    self.get_transactions(address=tr_from)
-                transaction = self.retrieve_transaction(hash)
-                if transaction == None:
-                    raise Exception(f'Transaction hash {hash} not found')
+                    # Non minting transactions don't seem to contain the price of the NFT,
+                    # thus we proceed by retrieving the transactions of the other party
+                    if self.address == tr_from:
+                        self.get_transactions(address=tr_to)
+                    else:
+                        self.get_transactions(address=tr_from)
+                    transaction = self.retrieve_transaction(txhash)
+            if transaction == None:
+                breakpoint()
+                raise Exception(f'Transaction hash {Int2HexStr(txhash)} not found')
+            
             # breakpoint()
-            nft_value = transaction['value'] if transaction is not None else '0'
-            nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName, nft_value)
+            nft = self.retrieve_nft(tokenID)
+            nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName, transaction)
         return True
-    
+
+    def set_ERC1155_transfers(self):
+        transfers = self.ps.get_ERC1155_token_transfers(address=self.address, contract_address=None)
+        if transfers == None:
+            print(f'No ERC1155 token transfers for {Int2HexStr(self.address)}')
+            return False
+        print(f'{len(transfers)} ERC1155 token transfers for {Int2HexStr(self.address)}')
+        return self.parse_token_transfers(transfers, 'ERC1155')
+
+    def set_ERC721_transfers(self):
+        transfers = self.ps.get_ERC721_token_transfers(address=self.address, contract_address=None)
+        if transfers == None:
+            print(f'No ERC721 token transfers for {Int2HexStr(self.address)}')
+            return False
+        print(f'{len(transfers)} ERC721 token transfers for {Int2HexStr(self.address)}')
+        return self.parse_token_transfers(transfers, 'ERC721')
+
     def retrieve_nft(self, id):
         for nft in self.NFTs:
             if nft.id == id:
@@ -432,11 +515,11 @@ class AddressMetrics:
         self.NFTs.append(nft)
         return nft
 
-    def retrieve_transaction(self, hash):
-        if hash.lower() in self.transactions:
-            return self.transactions[hash.lower()]
+    def retrieve_transaction(self, txhash):
+        if Int2HexStr(txhash) in TRANS_CACHE:
+            return TRANS_CACHE[Int2HexStr(txhash)]
         return None
-        # print(f'Transaction hash {hash} not found')
+        # print(f'Transaction hash {txhash} not found')
         # return None
 
 
@@ -455,32 +538,29 @@ def main(filename):
     balances = ps.get_POL_balance(wallets)
     for balance in balances:
         print(f"Account {balance['account']} has {balance['balance']} wei, {int(balance['balance'])/WEI_TO_POL} POL")
-        
+    
+    total_metrics = []
     for wallet in wallets:
         print(f'######## Address {wallet} ########')
 
-        metrics = AddressMetrics(wallet, ps)
+        addr_metrics = AddressMetrics(wallet, ps)
         
-        if not metrics.get_transactions():
+        if not addr_metrics.get_transactions():
             continue
         
-        metrics.set_ERC1155_transfers()
+        addr_metrics.set_ERC1155_transfers()
+
+        addr_metrics.set_ERC721_transfers()
+        
+        total_metrics.append(addr_metrics)
         
         # breakpoint()
+        # transfers = ps.get_ERC20_token_transfers(address=wallet,contract_address=None)
+        # if transfers is not None:
+        #     print(f'{len(transfers)} ERC20 token transfers')
+        #     for transfer in transfers:
+        #         print(transfer)
         
-
-        transfers = ps.get_ERC20_token_transfers(address=wallet,contract_address=None)
-        if transfers is not None:
-            print(f'{len(transfers)} ERC20 token transfers')
-            for transfer in transfers:
-                print(transfer)
-
-        transfers = ps.get_ERC721_token_transfers(address=wallet,contract_address=None)
-        if transfers is not None:
-            print(f'{len(transfers)} ERC721 token transfers')
-            for transfer in transfers:
-                print(transfer)
-
         # transactions = ps.get_normal_transactions(address=wallet)
         # print(f'{len(transactions)} Normal transactions')
         # for transaction in transactions:
@@ -494,11 +574,50 @@ def main(filename):
         # balance = ps.get_ERC20_token_balance(address=wallet,contract_address=contract_address)
         # print(f'ERC-20 Token Account Balance: {balance}')
         
-    # supply = ps.get_ERC20_token_supply(contract_address=contract_address)
-    # print(f'ERC-20 Token TotalSupply: {supply} for contractAddress {contract_address}')
+        # supply = ps.get_ERC20_token_supply(contract_address=contract_address)
+        # print(f'ERC-20 Token TotalSupply: {supply} for contractAddress {contract_address}')
     
-    
+    total_gov_nfts = 0
+    total_bought_nfts = 0
+    total_sold_nfts = 0
+    total_gains = 0
+    total_costs = 0
+    total_addrs = len(total_metrics)
+
+    for addr_metrics in total_metrics:
+        addr_gov_nfts = 0
+        addr_bought_nfts = 0
+        addr_sold_nfts = 0
+        addr_gains = 0
+        addr_costs = 0
+        for nft in addr_metrics.NFTs:
+            if nft.is_gov():
+                addr_gov_nfts = addr_gov_nfts + 1
+                continue
+            if nft.was_ever_sold():
+                addr_sold_nfts = addr_sold_nfts + 1
+                addr_gains = addr_gains + nft.get_revenue()
+            if nft.was_ever_bought():
+                addr_bought_nfts = addr_bought_nfts + 1
+                addr_costs = addr_costs + nft.get_costs()
+            if not (nft.is_gov() or nft.was_ever_sold() or nft.was_ever_bought() or nft.was_ever_created()):
+                raise Exception(f'NFT {nft.id} has no known status')
+            
+        total_gov_nfts = total_gov_nfts + addr_gov_nfts
+        total_bought_nfts = total_bought_nfts + addr_bought_nfts
+        total_sold_nfts = total_sold_nfts + addr_sold_nfts
+        total_gains = total_gains + addr_gains
+        total_costs = total_costs + addr_costs
+
+    print(f'Total addresses: {total_addrs}')
+    print(f'Average governance NFTs: {total_gov_nfts/total_addrs}')
+    print(f'Average bought NFTs: {total_bought_nfts/total_addrs}')
+    print(f'Average sold NFTs: {total_sold_nfts/total_addrs}')
+    print(f'Average gains from sold NFTs: {total_gains/total_addrs/WEI_TO_POL}')
+    print(f'Average costs from buying NFTs: {total_costs/total_addrs/WEI_TO_POL}')
+
     breakpoint()
+
 
 if __name__ == "__main__":
     import argparse
