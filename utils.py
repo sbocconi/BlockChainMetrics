@@ -19,11 +19,15 @@ def HexStr2Int(hexstring:str) -> int:
         return None
     return int(hexstring,16)
 
-def Int2HexStr(numint:int) -> str:
+def Int2HexStr(numint:int, length:int=None) -> str:
     """
         Convert to hex with padding to get even length
+        or to given length
     """
-    enc_ln = len(hex(numint)) - len('0x')
-    padd = enc_ln + enc_ln % 2
+    if length == None:
+        enc_ln = len(hex(numint)) - len('0x')
+        padd = enc_ln + enc_ln % 2
+    else:
+        padd = length
     # breakpoint()
     return f'0x{numint:0{padd}x}'

@@ -79,8 +79,12 @@ class PolygonScan:
                         return None
                     if 'result' in payload:
                         result = payload['result']
+                    elif 'error' in payload:
+                        print_error(f"Url {api_url_page} gave error {payload['error']}")
+                        return None
                     else:
-                        breakpoint()
+                        raise Exception(f"Url {api_url_page} gave unknown answer {payload}")
+                        
                 else:
                     print_error(f'Url {api_url_page} gave response {response.status_code}, {response}')
                     return None
@@ -90,7 +94,7 @@ class PolygonScan:
                 return self.make_call(api_url=api_url_page, attempt=attempt+1)
             except requests.exceptions.RequestException as e:
                 # This should catch all other requests exceptions
-                raise(f'Got {e} while calling {api_url_page}')
+                raise Exception(f'Got {e} while calling {api_url_page}')
             if not paginated:
                 return result
             elif paginated and result == []:
@@ -98,7 +102,7 @@ class PolygonScan:
             else:
                 if result == None:
                     # Should not happen
-                    raise(f'Result is None while calling {api_url_page}')
+                    raise Exception(f'Result is None while calling {api_url_page}')
                 results.extend(result)
                 if len(result) < offset:
                     return results
@@ -157,7 +161,7 @@ class PolygonScan:
         module = 'proxy'
         action = 'eth_getTransactionByHash'
     
-        api_url = f'{self.endpoint}?module={module}&action={action}&txhash={Int2HexStr(txhash)}&apikey={self.token}'
+        api_url = f'{self.endpoint}?module={module}&action={action}&txhash={Int2HexStr(txhash,64)}&apikey={self.token}'
         result = self.make_call(api_url=api_url, paginated=False)
 
         return result
