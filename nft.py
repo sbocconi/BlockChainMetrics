@@ -10,6 +10,11 @@ class NFT:
     BOUGHT = 'bought'
     GOV = 'governance'
 
+    @classmethod
+    def gen_key(cls, id, contractAddress):
+        return f'{id}_{contractAddress}'
+        # return id
+    
     def __init__(self, nft_tokenID):
         self.id = nft_tokenID
         self.dates = []

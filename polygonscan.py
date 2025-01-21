@@ -163,7 +163,7 @@ class PolygonScan:
     
         api_url = f'{self.endpoint}?module={module}&action={action}&txhash={Int2HexStr(txhash,64)}&apikey={self.token}'
         result = self.make_call(api_url=api_url, paginated=False)
-
+        # breakpoint()
         return result
 
     def get_normal_transactions(self, address:int):

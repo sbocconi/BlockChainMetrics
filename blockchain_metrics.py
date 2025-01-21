@@ -99,7 +99,7 @@ def main(filename):
     print(f'Average gains from sold NFTs: {total_gains/total_addrs/WEI_TO_POL}')
     print(f'Average costs from buying NFTs: {total_costs/total_addrs/WEI_TO_POL}')
 
-    breakpoint()
+    # breakpoint()
 
 
 if __name__ == "__main__":

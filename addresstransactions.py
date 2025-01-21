@@ -56,24 +56,26 @@ class AddressTransactions:
             txhash = HexStr2Int(tr['hash'])
             transaction = self.retrieve_transaction(txhash)
             if transaction == None:
-                print(f'Transaction hash {Int2HexStr(txhash)} not found, retrieving more transactions')
-                if tr_from == NFT.NFT_CREATION_ADR or tr_to == NFT.NFT_CREATION_ADR:
-                    # Too many transactions and they should be all of type mint with no costs
-                    transaction = self.ps.get_transaction(txhash)
-                else:
-                    # Non minting transactions don't seem to contain the price of the NFT,
-                    # thus we proceed by retrieving the transactions of the other party
+                print(f'Transaction hash {Int2HexStr(txhash)} not found, trying to retrieve it')
+                transaction = self.ps.get_transaction(txhash)
+
+                if transaction == None:
+                    # We fall back to calculating each transaction
+                    # for the other address
+                    # breakpoint()
                     if self.address == tr_from:
                         self.get_transactions(address=tr_to)
                     else:
                         self.get_transactions(address=tr_from)
+                    
                     transaction = self.retrieve_transaction(txhash)
-            if transaction == None:
-                breakpoint()
-                raise Exception(f'Transaction hash {Int2HexStr(txhash)} not found')
-            
+                    
+                    if transaction == None:
+                        # Nothing to do anymore
+                        raise Exception(f'Transaction hash {Int2HexStr(txhash)} not found')
+
             # breakpoint()
-            nft = self.retrieve_nft(tokenID)
+            nft = self.retrieve_nft(tokenID, contractAddress)
             nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName, transaction)
         return True
 
@@ -93,11 +95,12 @@ class AddressTransactions:
         print(f'{len(transfers)} ERC721 token transfers for {Int2HexStr(self.address)}')
         return self.parse_token_transfers(transfers, 'ERC721')
 
-    def retrieve_nft(self, id):
+    def retrieve_nft(self, id, contractAddress):
+        key = NFT.gen_key(id, contractAddress)
         for nft in self.NFTs:
-            if nft.id == id:
+            if nft.id == key:
                 return nft
-        nft = NFT(id)
+        nft = NFT(key)
         self.NFTs.append(nft)
         return nft
 
