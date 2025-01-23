@@ -1,4 +1,4 @@
-from utils import read_yaml
+from utils import read_yaml, Int2HexStr, HexStr2Int
 from polygonscan import PolygonScan
 from addresstransactions import AddressTransactions
 
@@ -6,7 +6,7 @@ from addresstransactions import AddressTransactions
 SETTINGS_FILE = '.settings.yaml'
 WEI_TO_POL = 10**18
 
-def main(filename):
+def main(filename, doContracts):
     settings = read_yaml(SETTINGS_FILE)
     token = settings['polygon']['token']
     calls_sec = settings['polygon']['calls_sec']
@@ -15,9 +15,20 @@ def main(filename):
     ps = PolygonScan(endpoint, token, calls_sec)
     
     addresses = read_yaml(filename)
-    wallets = addresses['wallets']
+    
+    wallets = None
+    contracts = None
+    
+    if doContracts:
+        contracts = addresses['contracts']
+    else:
+        wallets = addresses['wallets']
     # breakpoint()
     
+    if wallets == None:
+        wallets = ps.get_wallets(contracts)
+    
+    # breakpoint()
     balances = ps.get_POL_balance(wallets)
     for balance in balances:
         print(f"Account {balance['account']} has {balance['balance']} wei, {int(balance['balance'])/WEI_TO_POL} POL")
@@ -60,6 +71,13 @@ def main(filename):
         # supply = ps.get_ERC20_token_supply(contract_address=contract_address)
         # print(f'ERC-20 Token TotalSupply: {supply} for contractAddress {contract_address}')
     
+    # for addr_metrics in total_metrics:
+    #     for nft in addr_metrics.NFTs:
+    #         for i in range(len(nft.statuses)):
+    #             if len(nft.contractAddresses) != len(nft.statuses):
+    #                 breakpoint()
+    #             print(f'{Int2HexStr(nft.contractAddresses[i])}, {nft.statuses[i]}')
+
     total_gov_nfts = 0
     total_bought_nfts = 0
     total_sold_nfts = 0
@@ -93,11 +111,11 @@ def main(filename):
         total_costs = total_costs + addr_costs
 
     print(f'Total addresses: {total_addrs}')
-    print(f'Average governance NFTs: {total_gov_nfts/total_addrs}')
-    print(f'Average bought NFTs: {total_bought_nfts/total_addrs}')
-    print(f'Average sold NFTs: {total_sold_nfts/total_addrs}')
-    print(f'Average gains from sold NFTs: {total_gains/total_addrs/WEI_TO_POL}')
-    print(f'Average costs from buying NFTs: {total_costs/total_addrs/WEI_TO_POL}')
+    print(f'Average governance NFTs: {total_gov_nfts}/{total_addrs} = {total_gov_nfts/total_addrs}')
+    print(f'Average bought NFTs: {total_bought_nfts}/{total_addrs} = {total_bought_nfts/total_addrs}')
+    print(f'Average sold NFTs: {total_sold_nfts}/{total_addrs} = {total_sold_nfts/total_addrs}')
+    print(f'Average gains from sold NFTs (POL): {total_gains/WEI_TO_POL}/{total_addrs} = {total_gains/WEI_TO_POL/total_addrs}')
+    print(f'Average costs from buying NFTs (POL): {total_costs/WEI_TO_POL}/{total_addrs} = {total_costs/WEI_TO_POL/total_addrs}')
 
     # breakpoint()
 
@@ -118,6 +136,15 @@ if __name__ == "__main__":
         default='addresses.yaml',
         help='specifies the name of the file containing the addresses',
     )
+
+    parser.add_argument(
+        '-c', '--contracts',
+        dest='doContracts',
+        action='store_true',
+        required=False,
+        default=False,
+        help='specifies whether to start from contracts (or from wallet addresses)',
+    )
     args, unknown = parser.parse_known_args()
 
     if len(unknown) > 0:
@@ -125,4 +152,4 @@ if __name__ == "__main__":
         parser.print_help()
         exit(-1)
 
-    main(args.filename)
+    main(args.filename, args.doContracts)

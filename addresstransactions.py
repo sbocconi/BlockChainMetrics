@@ -56,7 +56,7 @@ class AddressTransactions:
             txhash = HexStr2Int(tr['hash'])
             transaction = self.retrieve_transaction(txhash)
             if transaction == None:
-                print(f'Transaction hash {Int2HexStr(txhash)} not found, trying to retrieve it')
+                # print(f'Transaction hash {Int2HexStr(txhash)} not found, trying to retrieve it')
                 transaction = self.ps.get_transaction(txhash)
 
                 if transaction == None:

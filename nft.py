@@ -55,10 +55,11 @@ class NFT:
                 if self.froms[-1] == NFT.NFT_CREATION_ADR:
                     # This NFT was created
                     # breakpoint()
-                    self.set_created()
                     if self.tokenNames[-1] == NFT.GOV_NFT:
                         # breakpoint()
                         self.set_gov()
+                    else:
+                        self.set_created()
                 else:
                     # This NFT was bought
                     # breakpoint()

@@ -1,10 +1,11 @@
 import requests
 import time
 
-from utils import Int2HexStr, print_error
+from utils import Int2HexStr, HexStr2Int, print_error
 
 class PolygonScan:
-    
+    SAFETY = 50
+
     def __init__(self, endpoint, token, calls_sec):
         # Parameters for http calls
         self.endpoint = endpoint
@@ -39,7 +40,7 @@ class PolygonScan:
             if sleep_ms > 0:
                 # We need to wait
                 print(f'Sleeping {sleep_ms} ms')
-                time.sleep(sleep_ms/1000)
+                time.sleep((sleep_ms+self.SAFETY)/1000)
                 # Update time of action since we slept
                 self.time_stamps[self.count] = time.time_ns() // 1_000_000
 
@@ -73,10 +74,18 @@ class PolygonScan:
                 response = requests.get(api_url_page)
                 if response.status_code == 200:
                     payload = response.json()
-                    if 'message' in payload and payload['message'] != 'OK' and payload['message'] != 'No transactions found':
-                        print_error(f'Url {api_url_page} gave response {payload}')
+                    if 'message' in payload and payload['message'] != 'OK':
                         # breakpoint()
-                        return None
+                        if payload['message'] == 'No transactions found':
+                            # no problem
+                            pass
+                        elif 'Max rate limit reached' in payload['result']:
+                            print(f'(Should not happen: sleeping {self.SAFETY} ms')
+                            time.sleep((self.SAFETY)/1000)
+                        else:
+                            print_error(f'Url {api_url_page} gave response {payload}')
+                            # breakpoint()
+                            return None
                     if 'result' in payload:
                         result = payload['result']
                     elif 'error' in payload:
@@ -84,7 +93,6 @@ class PolygonScan:
                         return None
                     else:
                         raise Exception(f"Url {api_url_page} gave unknown answer {payload}")
-                        
                 else:
                     print_error(f'Url {api_url_page} gave response {response.status_code}, {response}')
                     return None
@@ -105,6 +113,7 @@ class PolygonScan:
                     raise Exception(f'Result is None while calling {api_url_page}')
                 results.extend(result)
                 if len(result) < offset:
+                    # We got less than what we asked, return
                     return results
                 else:
                     # We continue paginating
@@ -113,6 +122,22 @@ class PolygonScan:
                 # breakpoint()
 
         
+
+    def get_wallets(self, contracts:list[int]):
+        wallets = []
+        for contract in contracts:
+            transactions = self.get_normal_transactions(contract)
+            for transaction in transactions:
+                if transaction['from'] != '':
+                    adrs = HexStr2Int(transaction['from'])
+                    if adrs not in wallets:
+                        wallets.append(HexStr2Int(transaction['from']))
+                if transaction['to'] != '':
+                    adrs = HexStr2Int(transaction['to'])
+                    if adrs not in wallets:
+                        wallets.append(HexStr2Int(transaction['to']))
+        return wallets
+
 
     def get_POL_balance(self, addresses:int):
         """
