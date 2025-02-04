@@ -2,3 +2,7 @@ polygon:
   token: <YOUR API TOKEN>
   endpoint: 'https://api-amoy.polygonscan.com/api'
   calls_sec: 5
+sepolia:
+  token: <YOUR API TOKEN>
+  endpoint: 'https://api-sepolia.etherscan.io/api'
+  calls_sec: 5

@@ -6,11 +6,11 @@ from addresstransactions import AddressTransactions
 SETTINGS_FILE = '.settings.yaml'
 WEI_TO_POL = 10**18
 
-def main(filename, doContracts):
+def main(filename, doContracts, network):
     settings = read_yaml(SETTINGS_FILE)
-    token = settings['polygon']['token']
-    calls_sec = settings['polygon']['calls_sec']
-    endpoint = settings['polygon']['endpoint']
+    token = settings[f'{network}']['token']
+    calls_sec = settings[f'{network}']['calls_sec']
+    endpoint = settings[f'{network}']['endpoint']
     
     ps = PolygonScan(endpoint, token, calls_sec)
     
@@ -138,6 +138,15 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        '-n', '--network',
+        dest='network',
+        action='store',
+        required=False,
+        default='polygon',
+        help='specifies the name of the network to use (polygon/sepolia)',
+    )
+
+    parser.add_argument(
         '-c', '--contracts',
         dest='doContracts',
         action='store_true',
@@ -152,4 +161,9 @@ if __name__ == "__main__":
         parser.print_help()
         exit(-1)
 
-    main(args.filename, args.doContracts)
+    if args.network not in ['polygon', 'sepolia']:
+        print(f'Network not supported: {args.network}')
+        parser.print_help()
+        exit(-1)
+
+    main(filename=args.filename, doContracts=args.doContracts, network=args.network)

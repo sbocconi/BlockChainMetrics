@@ -71,6 +71,7 @@ class PolygonScan:
                 api_url_page = api_url
             try:
                 self.throttle()
+                # print(api_url_page)
                 response = requests.get(api_url_page)
                 if response.status_code == 200:
                     payload = response.json()
