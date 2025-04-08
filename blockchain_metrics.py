@@ -7,6 +7,9 @@ SETTINGS_FILE = '.settings.yaml'
 WEI_TO_POL = 10**18
 
 def main(filename, doContracts, network):
+    
+    print(f'Running on network: {network}')
+
     settings = read_yaml(SETTINGS_FILE)
     token = settings[f'{network}']['token']
     calls_sec = settings[f'{network}']['calls_sec']
@@ -35,7 +38,7 @@ def main(filename, doContracts, network):
     
     total_metrics = []
     for wallet in wallets:
-        print(f'######## Address {wallet} ########')
+        print(f'######## Address {Int2HexStr(wallet)} ########')
 
         addr_metrics = AddressTransactions(wallet, ps)
         
