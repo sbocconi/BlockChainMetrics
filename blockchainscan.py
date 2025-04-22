@@ -3,7 +3,7 @@ import time
 
 from utils import Int2HexStr, HexStr2Int, print_error
 
-class PolygonScan:
+class BlockChainScan:
     SAFETY = 50
 
     def __init__(self, endpoint, token, calls_sec):

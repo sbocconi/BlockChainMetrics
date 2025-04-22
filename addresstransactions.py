@@ -1,5 +1,5 @@
 from datetime import datetime
-from polygonscan import PolygonScan
+from blockchainscan import BlockChainScan
 from utils import Int2HexStr, HexStr2Int
 from nft import NFT
 
@@ -8,7 +8,7 @@ TRANS_CACHE = {}
 
 class AddressTransactions:
 
-    def __init__(self, address:str, ps:PolygonScan):
+    def __init__(self, address:str, ps:BlockChainScan):
         self.address = address
         self.ps = ps
         
