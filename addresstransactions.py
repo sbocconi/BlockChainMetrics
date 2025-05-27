@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from BlockChainMetrics.blockchainscan import BlockChainScan
-from BlockChainMetrics.utils import Int2HexStr, HexStr2Int
-from BlockChainMetrics.nft import NFT
+from .blockchainscan import BlockChainScan
+from .utils import Int2HexStr, HexStr2Int
+from .nft import NFT
 
 TRANS_CACHE = {}
 def check_dict(tr):

@@ -1,4 +1,4 @@
-from blockchain_metrics import calculate_metrics
+from .blockchain_metrics import calculate_metrics
 
 if __name__ == "__main__":
     import argparse

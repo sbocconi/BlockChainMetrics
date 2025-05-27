@@ -1,7 +1,7 @@
 import requests
 import time
 
-from BlockChainMetrics.utils import Int2HexStr, HexStr2Int, print_error
+from .utils import Int2HexStr, HexStr2Int, print_error
 
 class BlockChainScan:
     SAFETY = 50

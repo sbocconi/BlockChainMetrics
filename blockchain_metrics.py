@@ -1,6 +1,6 @@
-from BlockChainMetrics.utils import read_yaml, Int2HexStr, HexStr2Int
-from BlockChainMetrics.blockchainscan import BlockChainScan
-from BlockChainMetrics.addresstransactions import AddressTransactions
+from .utils import read_yaml, Int2HexStr, HexStr2Int
+from .blockchainscan import BlockChainScan
+from .addresstransactions import AddressTransactions
 
 
 SETTINGS_FILE = '.settings.yaml'
