@@ -1,6 +1,6 @@
-from utils import read_yaml, Int2HexStr, HexStr2Int
-from blockchainscan import BlockChainScan
-from addresstransactions import AddressTransactions
+from BlockChainMetrics.utils import read_yaml, Int2HexStr, HexStr2Int
+from BlockChainMetrics.blockchainscan import BlockChainScan
+from BlockChainMetrics.addresstransactions import AddressTransactions
 
 
 SETTINGS_FILE = '.settings.yaml'
@@ -36,24 +36,25 @@ def metrics_per_wallet(wallets, bs):
     return total_metrics
             
 
-def calculate_metrics(filename, doContracts, network):
+def calculate_metrics(filename, doContracts, network, wallets:list[int]=None):
     if network == 'all':
         networks = ['sepolia', 'polygon']
     else:
         networks = [network]
-
-    addresses = read_yaml(filename)
-        
-    wallets = None
-    contracts = None
     
     if doContracts:
+        addresses = read_yaml(filename)
         contracts = addresses['contracts']
+        wallets = None
     else:
-        wallets = addresses['wallets']
+        contracts = None
+        if wallets == None:
+            addresses = read_yaml(filename)
+            wallets = addresses['wallets']
+        
     # breakpoint()
         
-    
+    total_metrics = []
     for network in networks:
         print(f'Running on network: {network}')
     
@@ -63,11 +64,13 @@ def calculate_metrics(filename, doContracts, network):
             wallets = bs.get_wallets(contracts)
         
         # breakpoint()
+
         balances = bs.get_POL_balance(wallets)
         for balance in balances:
             print(f"Account {balance['account']} has {balance['balance']} wei, {int(balance['balance'])/WEI_TO_POL} POL")
         
-        total_metrics = metrics_per_wallet(wallets, bs)
+        total_metrics.extend(metrics_per_wallet(wallets, bs))
+        # breakpoint()
 
         
         

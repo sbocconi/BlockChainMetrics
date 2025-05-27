@@ -1,5 +1,6 @@
 from datetime import datetime
-from utils import Int2HexStr, HexStr2Int, print_error
+
+from BlockChainMetrics.utils import Int2HexStr, HexStr2Int, print_error
 
 class NFT:
     GOV_NFT = 'NftGovernance'

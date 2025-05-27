@@ -1,7 +1,7 @@
 import requests
 import time
 
-from utils import Int2HexStr, HexStr2Int, print_error
+from BlockChainMetrics.utils import Int2HexStr, HexStr2Int, print_error
 
 class BlockChainScan:
     SAFETY = 50
@@ -140,7 +140,7 @@ class BlockChainScan:
         return wallets
 
 
-    def get_POL_balance(self, addresses:int):
+    def get_POL_balance(self, addresses:list[int]):
         """
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-pol-balance-for-a-single-address
             https://docs.polygonscan.com/amoy-polygonscan/api-endpoints/accounts#get-pol-balance-for-multiple-addresses-in-a-single-call
@@ -149,13 +149,13 @@ class BlockChainScan:
         module = 'account'
         tag = 'latest'
         
-        if type(addresses) == list:
+        if len(addresses) > 1:
             action = 'balancemulti'
             addr_list = ','.join([Int2HexStr(address) for address in addresses])
             api_url = f'{self.endpoint}?module={module}&action={action}&address={addr_list}&tag={tag}&apikey={self.token}'
         else:
             action = 'balance'
-            api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(addresses)}&tag={tag}&apikey={self.token}'
+            api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(addresses[0])}&tag={tag}&apikey={self.token}'
 
         result = self.make_call(api_url)
 

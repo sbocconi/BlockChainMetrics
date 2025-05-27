@@ -1,9 +1,13 @@
 from datetime import datetime
-from blockchainscan import BlockChainScan
-from utils import Int2HexStr, HexStr2Int
-from nft import NFT
+
+from BlockChainMetrics.blockchainscan import BlockChainScan
+from BlockChainMetrics.utils import Int2HexStr, HexStr2Int
+from BlockChainMetrics.nft import NFT
 
 TRANS_CACHE = {}
+def check_dict(tr):
+    if type(tr) != dict or len(tr.keys()) == 0:
+        breakpoint()
 
 
 class AddressTransactions:
@@ -14,6 +18,8 @@ class AddressTransactions:
         
         self.NFTs = []
 
+    
+    
     def get_transactions(self, address:str=None):
         if address == None:
             target_addr = self.address
@@ -26,6 +32,7 @@ class AddressTransactions:
         print(f'{len(transactions)} Normal transactions for {Int2HexStr(target_addr)}')
         for tr in transactions:
             # print(tr)
+            check_dict(tr)
             txhash = HexStr2Int(tr['hash'])
             if Int2HexStr(txhash) not in TRANS_CACHE:
                 TRANS_CACHE[Int2HexStr(txhash)] = {}
@@ -39,7 +46,8 @@ class AddressTransactions:
     
     def parse_token_transfers(self, transfers, tokentype):
         for tr in transfers:
-            # print(tr)
+            # print(f"tr is {tr}")
+            check_dict(tr)
             tokenID = int(tr['tokenID'])
             tr_date = datetime.fromtimestamp(int(tr['timeStamp']))
             tr_from = HexStr2Int(tr['from'])
@@ -92,6 +100,7 @@ class AddressTransactions:
         if transfers == None:
             print(f'No ERC721 token transfers for {Int2HexStr(self.address)}')
             return False
+        # breakpoint()
         print(f'{len(transfers)} ERC721 token transfers for {Int2HexStr(self.address)}')
         return self.parse_token_transfers(transfers, 'ERC721')
 
