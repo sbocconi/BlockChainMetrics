@@ -1,14 +1,10 @@
 from datetime import datetime
 
 from .blockchainscan import BlockChainScan
-from .utils import Int2HexStr, HexStr2Int
+from .utils import Int2HexStr, HexStr2Int, check_dict
 from .nft import NFT
 
 TRANS_CACHE = {}
-def check_dict(tr):
-    if type(tr) != dict or len(tr.keys()) == 0:
-        breakpoint()
-
 
 class AddressTransactions:
 

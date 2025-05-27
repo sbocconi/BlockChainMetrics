@@ -3,6 +3,10 @@ import time
 
 from .utils import Int2HexStr, HexStr2Int, print_error
 
+# SEP_MAX_RATE = 'Max calls per sec rate limit reached (5/sec)'
+SEP_MAX_RATE_MSG = 'Max calls'
+POL_MAX_RATE_MSG = 'Max rate'
+
 class BlockChainScan:
     SAFETY = 50
 
@@ -57,6 +61,7 @@ class BlockChainScan:
         if attempt > 5:
             raise Exception(f'{api_url} timed out ({attempt} times)')
         
+        throttled = False
         result = None
         results = []
         page = 1
@@ -79,21 +84,24 @@ class BlockChainScan:
                         # breakpoint()
                         if payload['message'] == 'No transactions found':
                             # no problem
-                            pass
-                        elif 'Max rate limit reached' in payload['result']:
-                            print(f'(Should not happen: sleeping {self.SAFETY} ms')
+                            result = []
+                        elif POL_MAX_RATE_MSG in payload['result'] or SEP_MAX_RATE_MSG in payload['result']:
+                            print(f'(Should not happen) sleeping {self.SAFETY} ms')
+                            # breakpoint()
+                            throttled = True
                             time.sleep((self.SAFETY)/1000)
                         else:
                             print_error(f'Url {api_url_page} gave response {payload}')
                             # breakpoint()
                             return None
-                    if 'result' in payload:
-                        result = payload['result']
-                    elif 'error' in payload:
-                        print_error(f"Url {api_url_page} gave error {payload['error']}")
-                        return None
                     else:
-                        raise Exception(f"Url {api_url_page} gave unknown answer {payload}")
+                        if 'result' in payload:
+                            result = payload['result']
+                        elif 'error' in payload:
+                            print_error(f"Url {api_url_page} gave error {payload['error']}")
+                            return None
+                        else:
+                            raise Exception(f"Url {api_url_page} gave unknown answer {payload}")
                 else:
                     print_error(f'Url {api_url_page} gave response {response.status_code}, {response}')
                     return None
@@ -104,7 +112,10 @@ class BlockChainScan:
             except requests.exceptions.RequestException as e:
                 # This should catch all other requests exceptions
                 raise Exception(f'Got {e} while calling {api_url_page}')
-            if not paginated:
+            if throttled:
+                # We try again
+                throttled = False
+            elif not paginated:
                 return result
             elif paginated and result == []:
                 return results

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from .utils import Int2HexStr, HexStr2Int, print_error
+from .utils import Int2HexStr, HexStr2Int, print_error, check_dict
 
 class NFT:
     GOV_NFT = 'NftGovernance'
@@ -35,6 +35,7 @@ class NFT:
         self.contractAddresses.append(nft_contractAddress)
         self.tokenValues.append(nft_tokenValue)
         self.tokenNames.append(nft_tokenName)
+        check_dict(transaction)
         self.txhashes.append(transaction['hash'])
 
         if type(transaction['value']) == int:

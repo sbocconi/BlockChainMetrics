@@ -31,3 +31,8 @@ def Int2HexStr(numint:int, length:int=None) -> str:
         padd = length
     # breakpoint()
     return f'0x{numint:0{padd}x}'
+
+def check_dict(tr):
+    if type(tr) != dict or len(tr.keys()) == 0:
+        breakpoint()
+
