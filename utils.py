@@ -34,5 +34,6 @@ def Int2HexStr(numint:int, length:int=None) -> str:
 
 def check_dict(tr):
     if type(tr) != dict or len(tr.keys()) == 0:
+        print(f"Expected non-empty dict but got {tr}: likely some problem with the http call")
         breakpoint()
 
