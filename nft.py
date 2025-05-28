@@ -16,8 +16,9 @@ class NFT:
         return f'{id}_{contractAddress}'
         # return id
     
-    def __init__(self, nft_tokenID):
+    def __init__(self, nft_tokenID, network):
         self.id = nft_tokenID
+        self.network = network
         self.dates = []
         self.froms = []
         self.tos = []
@@ -29,9 +30,13 @@ class NFT:
         self.txhashes = []
         
     def update_nft(self, user_addr:int, nft_date:datetime, nft_from:int, nft_to:int, nft_contractAddress:int, nft_tokenValue:int, nft_tokenName:str, transaction:dict):
+        if nft_to == nft_from:
+            print(f"Lilely test transaction on {self.network}, take no action")
+            return
         self.dates.append(nft_date)
         self.froms.append(nft_from)
         self.tos.append(nft_to)
+        
         self.contractAddresses.append(nft_contractAddress)
         self.tokenValues.append(nft_tokenValue)
         self.tokenNames.append(nft_tokenName)
@@ -101,17 +106,40 @@ class NFT:
             raise Exception(f'NFT {self.id} has incompatible status to be a governance NFT')
         self.statuses.append(NFT.GOV)
 
-    def was_ever_sold(self) -> bool:
+    def get_nr_sales(self) -> int:
+        nr_sales = 0
         for i in range(len(self.statuses)):
             if self.statuses[i] == NFT.SOLD:
-                return True
-        return False
+                nr_sales += 1
+        return nr_sales
+    
+    def get_sellers(self) -> list[int]:
+        sellers = []
+        for i in range(len(self.statuses)):
+            if self.statuses[i] == NFT.SOLD:
+                sellers.append(self.froms[i])
+        return sellers
 
-    def was_ever_bought(self) -> bool:
+    def get_nr_purchases(self) -> int:
+        nr_purchases = 0
         for i in range(len(self.statuses)):
             if self.statuses[i] == NFT.BOUGHT:
-                return True
-        return False
+                nr_purchases += 1
+        return nr_purchases
+
+    def get_buyers(self) -> list[int]:
+        buyers = []
+        for i in range(len(self.statuses)):
+            if self.statuses[i] == NFT.BOUGHT:
+                buyers.append(self.tos[i])
+        return buyers
+
+    def was_ever_sold(self) -> bool:
+        return self.get_nr_sales() > 0
+    
+    def was_ever_bought(self) -> bool:
+        return self.get_nr_purchases() > 0
+
     
     def was_ever_created(self) -> bool:
         if len(self.statuses) == 0:

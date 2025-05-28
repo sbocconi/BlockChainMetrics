@@ -37,3 +37,6 @@ def check_dict(tr):
         print(f"Expected non-empty dict but got {tr}: likely some problem with the http call")
         breakpoint()
 
+def make_percentage(nmbr:float, digits:int=2)-> float:
+
+    return int(nmbr*100*(10**digits))/100

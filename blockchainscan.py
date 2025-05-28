@@ -10,7 +10,9 @@ POL_MAX_RATE_MSG = 'Max rate'
 class BlockChainScan:
     SAFETY = 50
 
-    def __init__(self, endpoint, token, calls_sec):
+    def __init__(self, network:str, endpoint:str, token:str, calls_sec:int):
+        # We also store the name of the network
+        self.network = network
         # Parameters for http calls
         self.endpoint = endpoint
         self.token = token

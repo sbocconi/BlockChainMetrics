@@ -11,6 +11,7 @@ class AddressTransactions:
     def __init__(self, address:str, ps:BlockChainScan):
         self.address = address
         self.ps = ps
+        self.network = ps.network
         
         self.NFTs = []
 
@@ -79,7 +80,7 @@ class AddressTransactions:
                         raise Exception(f'Transaction hash {Int2HexStr(txhash)} not found')
 
             # breakpoint()
-            nft = self.retrieve_nft(tokenID, contractAddress)
+            nft = self.retrieve_nft(tokenID, contractAddress, self.network)
             nft.update_nft(self.address, tr_date, tr_from, tr_to, contractAddress, tokenValue, tokenName, transaction)
         return True
 
@@ -100,12 +101,12 @@ class AddressTransactions:
         print(f'{len(transfers)} ERC721 token transfers for {Int2HexStr(self.address)}')
         return self.parse_token_transfers(transfers, 'ERC721')
 
-    def retrieve_nft(self, id, contractAddress):
+    def retrieve_nft(self, id, contractAddress, network):
         key = NFT.gen_key(id, contractAddress)
         for nft in self.NFTs:
             if nft.id == key:
                 return nft
-        nft = NFT(key)
+        nft = NFT(key, network)
         self.NFTs.append(nft)
         return nft
 
