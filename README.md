@@ -4,7 +4,7 @@ Given addresses used on a Blockchain (Polygon or Sepolia), retrieves transaction
 
 Here the output of a run with 3 addresses:
 
-![alt Screenshot output](https://github.com/sbocconi/BlockChainMetrics/blob/main/figs/Screenshot%202025-05-20%20at%2012.33.23.png)
+![alt Screenshot output](figs/Screenshot%202025-05-20%20at%2012.33.23.png)
 
 ## Usage
 
