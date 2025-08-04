@@ -165,10 +165,10 @@ class BlockChainScan:
         if len(addresses) > 1:
             action = 'balancemulti'
             addr_list = ','.join([Int2HexStr(address) for address in addresses])
-            api_url = f'{self.endpoint}?module={module}&action={action}&address={addr_list}&tag={tag}&apikey={self.token}'
+            api_url = f'{self.endpoint}&module={module}&action={action}&address={addr_list}&tag={tag}&apikey={self.token}'
         else:
             action = 'balance'
-            api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(addresses[0])}&tag={tag}&apikey={self.token}'
+            api_url = f'{self.endpoint}&module={module}&action={action}&address={Int2HexStr(addresses[0])}&tag={tag}&apikey={self.token}'
 
         result = self.make_call(api_url)
 
@@ -188,7 +188,7 @@ class BlockChainScan:
         action = 'eth_getTransactionCount'
         tag = 'latest'
     
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&tag={tag}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&address={Int2HexStr(address)}&tag={tag}&apikey={self.token}'
         result = self.make_call(api_url=api_url, paginated=False)
 
         return result
@@ -200,7 +200,7 @@ class BlockChainScan:
         module = 'proxy'
         action = 'eth_getTransactionByHash'
     
-        api_url = f'{self.endpoint}?module={module}&action={action}&txhash={Int2HexStr(txhash,64)}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&txhash={Int2HexStr(txhash,64)}&apikey={self.token}'
         result = self.make_call(api_url=api_url, paginated=False)
         # breakpoint()
         return result
@@ -214,7 +214,7 @@ class BlockChainScan:
         sort = 'asc'
         startblock = 0
         endblock = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
 
         results = self.make_call(api_url=api_url, paginated=True)
 
@@ -229,7 +229,7 @@ class BlockChainScan:
         sort = 'asc'
         startblock = 0
         endblock = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&address={Int2HexStr(address)}&sort={sort}&startblock={startblock}&endblock={endblock}&apikey={self.token}'
 
         results = self.make_call(api_url=api_url, paginated=True)
 
@@ -239,7 +239,7 @@ class BlockChainScan:
         module = 'account'
         action = action
         sort = 'asc'
-        api_url = f'{self.endpoint}?module={module}&action={action}&sort={sort}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&sort={sort}&apikey={self.token}'
         
         if address is None and contract_address is None:
             raise Exception(f'Address and contract address cannot be both null')
@@ -277,7 +277,7 @@ class BlockChainScan:
         """
         module = 'stats'
         action = 'tokensupply'
-        api_url = f'{self.endpoint}?module={module}&action={action}&contractaddress={Int2HexStr(contract_address)}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&contractaddress={Int2HexStr(contract_address)}&apikey={self.token}'
         result = self.make_call(api_url)
         return result
 
@@ -288,6 +288,6 @@ class BlockChainScan:
         module = 'account'
         action = 'tokenbalance'
         tag = 'latest'
-        api_url = f'{self.endpoint}?module={module}&action={action}&address={Int2HexStr(address)}&contractaddress={Int2HexStr(contract_address)}&tag={tag}&apikey={self.token}'
+        api_url = f'{self.endpoint}&module={module}&action={action}&address={Int2HexStr(address)}&contractaddress={Int2HexStr(contract_address)}&tag={tag}&apikey={self.token}'
         result = self.make_call(api_url)
         return result

@@ -31,7 +31,7 @@ class NFT:
         
     def update_nft(self, user_addr:int, nft_date:datetime, nft_from:int, nft_to:int, nft_contractAddress:int, nft_tokenValue:int, nft_tokenName:str, transaction:dict):
         if nft_to == nft_from:
-            print(f"Lilely test transaction on {self.network}, take no action")
+            print(f"Likely test transaction on {self.network}, take no action")
             return
         self.dates.append(nft_date)
         self.froms.append(nft_from)
